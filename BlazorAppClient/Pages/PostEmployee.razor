@@ -1,0 +1,162 @@
+﻿@page "/addemployee/{employeeId:int}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+
+<h3 class="mb-4">Add New Employee</h3>
+<EditForm Model="emp" OnValidSubmit="AddEmployee">
+    <DataAnnotationsValidator />
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="employeeId" class="form-label">Employee ID</label>
+                    <SfNumericTextBox id="employeeId" Placeholder="Enter ID" @bind-Value="emp.Id" class="form-control" Readonly="@(EmployeeId > 0)" />
+                    <ValidationMessage For="@(() => emp.Id)"></ValidationMessage>
+                </div>
+
+                <div class="mb-3">
+                    <label for="employeeName" class="form-label">Employee Name</label>
+                    <SfTextBox id="employeeName" Placeholder="Enter Name" @bind-Value="emp.Name" class="form-control" />
+                    <ValidationMessage For="@(() => emp.Name)"></ValidationMessage>
+                </div>
+
+                <div class="mb-3">
+                    <label for="employeeAge" class="form-label">Age</label>
+                    <SfNumericTextBox id="employeeAge" Placeholder="Enter Age" @bind-Value="emp.Age" class="form-control" />
+                    <ValidationMessage For="@(() => emp.Age)"></ValidationMessage>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Gender</label><br />
+
+                    <SfRadioButton Label="Male" Name="GenderOptions" Value="Male" @bind-Checked="emp.Gender"></SfRadioButton>
+                    <SfRadioButton Label="Female" Name="GenderOptions" Value="Female" @bind-Checked="emp.Gender"></SfRadioButton>
+                    <SfRadioButton Label="Other" Name="GenderOptions" Value="Other" @bind-Checked="emp.Gender"></SfRadioButton>
+                    <ValidationMessage For="@(() => emp.Gender)"></ValidationMessage>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Employee Type</label>
+                    <SfDropDownList TItem="string" TValue="string" @bind-Value="emp.EmpType" DataSource="empTypes" Placeholder="Select Employee Type"></SfDropDownList>
+                    <ValidationMessage For="@(() => emp.EmpType)"></ValidationMessage>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Languages Known</label><br />
+                    @foreach (var lang in languagesList)
+                    {
+                        <div class="form-check d-inline-block me-3">
+                            <SfCheckBox Label="@lang" @bind-Checked="selectedLanguages[lang]"></SfCheckBox>
+                        </div>
+                    }
+
+                </div>
+
+                <div class="d-grid gap-2">
+                    <SfButton CssClass="e-primary" style="width: 20%;">
+                        @(EmployeeId == 0 ? "Add Employee" : "Update")
+                    </SfButton>
+                </div>
+
+
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <p class="text-success">@message</p>
+        </div>
+    </div>
+</EditForm>
+
+
+@code {
+    private EmpTable emp = new();
+    private string message = "";
+    [Parameter] public int EmployeeId { get; set; }
+    HttpResponseMessage response;
+
+    private List<string> empTypes = new() { "Full-Time", "Part-Time", "Contract", "Internship" };
+    private List<string> languagesList = new() { "English", "Spanish", "German", "French" };
+    private Dictionary<string, bool> selectedLanguages = new() { { "English", false }, { "Spanish", false }, { "German", false }, { "French", false } };
+
+    private async Task AddEmployee()
+    {
+        // Convert selected checkboxes to a comma-separated string
+        emp.Languages = string.Join(", ", selectedLanguages.Where(l => l.Value).Select(l => l.Key));
+
+
+
+        if (EmployeeId == 0)  // New employee
+        {
+            response = await Http.PostAsJsonAsync("https://localhost:7149/api/Student", emp);
+            if (response.IsSuccessStatusCode)
+            {
+                message = "Employee added successfully!";
+                emp = new(); // Reset form
+                selectedLanguages = new() { { "English", false }, { "Spanish", false }, { "German", false }, { "French", false } }; // Reset checkboxes
+                
+            }
+            else
+            {
+                message = "Failed to add employee. Please try again.";
+            }
+        }
+        else  // Update existing employee
+        {
+            response = await Http.PutAsJsonAsync($"https://localhost:7149/api/Student/{EmployeeId}", emp);
+            if (response.IsSuccessStatusCode)
+            {
+                message = "Employee updated successfully!";
+                
+
+            }
+            else
+            {
+                message = "Failed to update employee. Please try again.";
+            }
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            emp = new(); // Reset form
+            selectedLanguages = new() { { "English", false }, { "Spanish", false }, { "German", false }, { "French", false } }; // Reset checkboxes
+        }
+    }
+
+
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        message = "";
+        try
+        {
+            emp = await Http.GetFromJsonAsync<EmpTable>($"https://localhost:7149/api/Student/{EmployeeId}");
+
+            if (emp != null && !string.IsNullOrEmpty(emp.Languages))
+            {
+                // Reset all checkboxes
+                foreach (var key in selectedLanguages.Keys.ToList())
+                {
+                    selectedLanguages[key] = false;
+                }
+
+                // Mark selected languages as checked
+                var empLanguages = emp.Languages.Split(", ").ToList();
+                foreach (var lang in empLanguages)
+                {
+                    if (selectedLanguages.ContainsKey(lang))
+                    {
+                        selectedLanguages[lang] = true;
+                    }
+                }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading employee details: {ex.Message}");
+        }
+    }
+}

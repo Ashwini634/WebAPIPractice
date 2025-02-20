@@ -1,0 +1,47 @@
+﻿@page "/register"
+@using Syncfusion.Blazor.Inputs
+@inject AuthenticationService AuthenticationService
+
+<EditForm Model="registerDto" OnValidSubmit="RegisterUser">
+    <DataAnnotationsValidator />
+
+    <div>
+        <label>Username:</label>
+        <SfTextBox Placeholder="Enter Username" @bind-Value="registerDto.Username"></SfTextBox>
+        <ValidationMessage For="@(() => registerDto.Username)"></ValidationMessage>
+    </div>
+
+    <div>
+        <label>Email:</label>
+        <SfTextBox Placeholder="Enter Email" @bind-Value="registerDto.Email"></SfTextBox>
+        <ValidationMessage For="@(() => registerDto.Email)"></ValidationMessage>
+    </div>
+
+    <div>
+        <label>Password:</label>
+        <SfTextBox Placeholder="Enter Password" @bind-Value="registerDto.Password"></SfTextBox>
+        <ValidationMessage For="@(() => registerDto.Password)"></ValidationMessage>
+    </div>
+
+    <SfButton>Register</SfButton>
+
+    <p>@message</p>
+</EditForm>
+
+@code {
+    private RegisterDTO registerDto = new RegisterDTO();
+    private string message = "";
+
+    private async Task RegisterUser()
+    {
+        var response = await AuthenticationService.RegisterAsync(registerDto);
+        if (response.IsSuccess)
+        {
+            message = "Registration successful!";
+        }
+        else
+        {
+            message = "Registration failed. Try again.";
+        }
+    }
+}
